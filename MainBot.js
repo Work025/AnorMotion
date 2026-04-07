@@ -1,5 +1,15 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
+const http = require('http');
+
+// Render uchun dummmy HTTP server (Free Tier uchun kerak)
+const port = process.env.PORT || 10000;
+http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Bot ishlayapti...\n');
+}).listen(port);
+
+console.log(`HTTP server ${port}-portda ishlamoqda.`);
 
 // Tokenni o'rnating
 const token = process.env.BOT_TOKEN;

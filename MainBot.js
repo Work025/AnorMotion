@@ -12,8 +12,8 @@ if (!token) {
 // Botni polling rejimi bilan ishga tushiring
 const bot = new TelegramBot(token, { polling: true });
 
-// Obuna bo'lish kerak bo'lgan kanallar ro'yxati (faqat bitta kanal qoldi)
-const channels = ['@websitemake025', 't.me/anime_12332', 'https://t.me/Fimodauz'];
+// Obuna bo'lish kerak bo'lgan kanallar ro'yxati (Faqat @username ko'rinishida yozing)
+const channels = ['@websitemake025', '@Fimodauz'];
 
 console.log('Bot ishga tushdi...');
 
@@ -24,12 +24,17 @@ async function checkSubscription(userId) {
     try {
       const member = await bot.getChatMember(channel, userId);
       console.log(`Kanal: ${channel}, Status: ${member.status}`);
-      if (['left', 'kicked'].includes(member.status)) {
-        return false;
+      
+      // Agar foydalanuvchi asoschi yoki admin bo'lsa, obuna bo'lgan hisoblanadi
+      if (['creator', 'administrator', 'member'].includes(member.status)) {
+        continue; // Keyingi kanalga o'tish
+      } else {
+        return false; // Obuna bo'lmagan (left, kicked)
       }
     } catch (error) {
       console.error(`${channel} kanalini tekshirishda xatolik:`, error.message);
-      return false;
+      // Agar kanal topilmasa yoki boshqa xato bo'lsa, uni o'tkazib yuboramiz (ixtiyoriy)
+      // return false; // Agar xohlasangiz, xatolikda qaytarib yuboring
     }
   }
   return true;
@@ -49,7 +54,7 @@ function sendMainMenu(chatId) {
         [
           {
             text: "🎭 Mangani ko'rib o'qish (Mini App)",
-            web_app: { url: 'https://your-mini-app-url.vercel.app' }
+            web_app: { url: 'https://anor-motion.vercel.app' }
           }
         ]
       ]

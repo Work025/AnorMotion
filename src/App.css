@@ -1,54 +1,193 @@
-.App {
-  text-align: center;
-  background-color: #1c1c1c;
+:root {
+  --neon-yellow: #fcee0a;
+  --neon-blue: #00f0ff;
+  --dark-bg: #050505;
+  --card-bg: #121212;
+}
+
+body {
+  margin: 0;
+  background-color: var(--dark-bg);
   color: white;
-  min-height: 100vh;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
 }
 
-.App-header {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
+.App {
+  padding-bottom: 70px; /* Nav bar uchun joy */
+  font-family: 'Outfit', sans-serif;
 }
 
-.App-header h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-top: 10px;
-  background: linear-gradient(90deg, #0088cc, #00c6ff);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Animatsiyalar */
+.fadeIn {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Qidiruv paneli */
+.search-bar {
+  padding: 15px;
+  position: sticky;
+  top: 0;
+  background: var(--dark-bg);
+  z-index: 10;
+}
+
+.search-bar input {
+  width: 90%;
+  padding: 12px 15px;
+  background: #1a1a1a;
+  border: 1px solid var(--neon-yellow);
+  border-radius: 8px;
+  color: white;
+  outline: none;
+  box-shadow: 0 0 10px rgba(252, 238, 10, 0.2);
+}
+
+/* Anime Grid */
+.anime-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  padding: 15px;
+}
+
+.anime-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s;
+}
+
+.anime-card:active {
+  transform: scale(0.95);
+}
+
+.anime-card img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+}
+
+.card-info {
+  padding: 10px;
+}
+
+.card-info h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-info p {
+  margin: 5px 0 0;
+  font-size: 0.7rem;
+  color: #888;
+}
+
+/* Details Page */
+.details-view {
+  padding: 15px;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--neon-blue);
+  padding: 10px 0;
+  font-size: 1rem;
+  cursor: pointer;
 }
 
 .video-container {
-  width: 95%;
-  max-width: 600px;
+  width: 100%;
   border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #000;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  margin-bottom: 15px;
 }
 
-video {
-  display: block;
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.description {
-  width: 90%;
-  max-width: 500px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 15px;
-  border-radius: 12px;
+.lang-switcher {
+  display: flex;
+  gap: 10px;
+}
+
+.lang-switcher button, .fav-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #1a1a1a;
+  color: white;
+  font-weight: 600;
+}
+
+.lang-switcher button.active {
+  background: var(--neon-yellow);
+  color: black;
+  border-color: var(--neon-yellow);
+}
+
+.fav-btn.is-fav {
+  border-color: #ff4b2b;
+  color: #ff4b2b;
+}
+
+.anime-description h1 {
+  font-size: 1.4rem;
+  color: var(--neon-yellow);
+  margin: 20px 0 10px;
+}
+
+.anime-description p {
   font-size: 0.9rem;
-  line-height: 1.4;
-  color: #b0b0b0;
+  line-height: 1.5;
+  color: #ccc;
 }
 
-.description p {
-  margin: 0;
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 60px;
+  background: #000;
+  display: flex;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottom-nav button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-nav button.active {
+  color: var(--neon-yellow);
+}
+
+.no-results {
+  grid-column: span 2;
+  text-align: center;
+  padding: 40px;
+  color: #666;
 }

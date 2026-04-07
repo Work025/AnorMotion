@@ -40,45 +40,6 @@ async function checkSubscription(userId) {
   return true;
 }
 
-// Asosiy menyuni yuborish
-function sendMainMenu(chatId) {
-  const opts = {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          {
-            text: "📖 Senariyni o'qish",
-            url: 'https://t.me/bizbirgalikdakurashamizsenari'
-          }
-        ],
-        [
-          {
-            text: "🎭 Mangani ko'rib o'qish (Mini App)",
-            web_app: { url: 'https://anor-motion.vercel.app' }
-          }
-        ]
-      ]
-    }
-  };
-  bot.sendMessage(chatId, "Assalomu alaykum! Obuna uchun rahmat. Manga o'qish bo'limini tanlang:", opts);
-}
-
-// Obuna bo'lish haqida xabar yuborish
-function sendSubscriptionPrompt(chatId) {
-  const opts = {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: "1️⃣ Kanalga a'zo bo'lish", url: 'https://t.me/websitemake025' }
-        ],
-        [
-          { text: "✅ Tekshirish (A'zo bo'lgach bosing)", callback_data: 'check_subs' }
-        ]
-      ]
-    }
-  };
-  bot.sendMessage(chatId, "Botdan foydalanish uchun avval quyidagi kanalga obuna bo'ling va 'Tekshirish' tugmasini bosing:", opts);
-}
 
 // /start komandasi
 bot.onText(/\/start/, async (msg) => {
@@ -94,6 +55,55 @@ bot.onText(/\/start/, async (msg) => {
   }
 });
 
+// Asosiy menyuni yuborish
+function sendMainMenu(chatId) {
+  const opts = {
+    parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: "🍎 Anor | Motion Mini App",
+            web_app: { url: 'https://anor-motion.vercel.app' }
+          }
+        ],
+        [
+          {
+            text: "🎬 Bizning kanal",
+            url: 'https://t.me/websitemake025'
+          },
+          {
+            text: "🎭 Senariyni o'qish",
+            url: 'https://t.me/bizbirgalikdakurashamizsenari'
+          }
+        ]
+      ]
+    }
+  };
+  bot.sendMessage(chatId, "<b>Xush kelibsiz!</b>\n\nQuyidagi tugma orqali ilovamizga kirishingiz va animelarni ko'rishingiz mumkin:", opts);
+}
+
+// Obuna bo'lish haqida xabar yuborish
+function sendSubscriptionPrompt(chatId) {
+  const opts = {
+    parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: "1️⃣ Mashhur kanallarimiz", url: 'https://t.me/websitemake025' }
+        ],
+        [
+          { text: "2️⃣ Fimodauz kanali", url: 'https://t.me/Fimodauz' }
+        ],
+        [
+          { text: "✅ Tekshirish", callback_data: 'check_subs' }
+        ]
+      ]
+    }
+  };
+  bot.sendMessage(chatId, "<b>Assalomu alaykum!</b>\n\nBotdan foydalanish uchun avval quyidagi kanallarga obuna bo'ling va <b>'Tekshirish'</b> tugmasini bosing:", opts);
+}
+
 // Tugmalarni boshqarish
 bot.on('callback_query', async (callbackQuery) => {
   const action = callbackQuery.data;
@@ -108,18 +118,13 @@ bot.on('callback_query', async (callbackQuery) => {
         await bot.deleteMessage(chatId, msg.message_id);
       } catch (e) { }
       sendMainMenu(chatId);
-      bot.answerCallbackQuery(callbackQuery.id, { text: "Tabriklaymiz! Obuna tasdiqlandi." });
+      bot.answerCallbackQuery(callbackQuery.id, { text: "Rahmat! Obuna tasdiqlandi." });
     } else {
       bot.answerCallbackQuery(callbackQuery.id, {
-        text: "Siz hali kanalga obuna bo'lmagansiz! Iltimos, a'zo bo'ling va qayta urinib ko'ring.",
+        text: "Siz hali barcha kanallarga obuna bo'lmagansiz!",
         show_alert: true
       });
     }
-  } else if (action === 'read_manga_visual') {
-    bot.sendMessage(chatId, "Mangani ko'rib o'qish xizmati tez orada ishga tushadi. Hozircha veb-sayt tayyorlanmoqda.");
-    bot.answerCallbackQuery(callbackQuery.id);
-  } else {
-    bot.answerCallbackQuery(callbackQuery.id);
   }
 });
 

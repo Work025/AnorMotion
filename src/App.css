@@ -15,6 +15,12 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+.login-screen.profile-bg {
+  background: #000;
+  min-height: calc(100vh - 130px);
+  padding-top: 60px;
+}
+
 .App {
   padding-top: 60px; 
   padding-bottom: 70px; 

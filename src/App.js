@@ -181,9 +181,14 @@ function App() {
   const renderProfile = () => (
     <div className="view-content fadeIn profile-view">
       {!user ? (
-        <div className="login-screen">
+        <div className="login-screen profile-bg">
           <div className="logo-center">
-            <img src="/logo.png" alt="Anor Motion Logo" className="logo-img" />
+            <img 
+              src="/logo.png" 
+              alt="Anor Motion Logo" 
+              className="logo-img" 
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
             <h1><span>ANOR</span> | MOTION</h1>
           </div>
           <div className="id-login">
@@ -251,7 +256,12 @@ function App() {
     <div className="App">
       <header>
         <div className="logo-container">
-          <img src="/logo.png" alt="Anor Motion Logo" className="logo-img" />
+          <img 
+            src="/logo.png" 
+            alt="Anor Motion" 
+            className="logo-img" 
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
         </div>
         <div className="brand-name"><span>ANOR</span> | MOTION</div>
         <div className="header-icon">{icons.bell}</div>

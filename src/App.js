@@ -87,16 +87,24 @@ function App() {
       <div className="anime-grid">
         {animeData.map(anime => (
           <div key={anime.id} className="anime-card" onClick={() => openDetails(anime)}>
-            <div className={`badge ${anime.isPremium ? 'premium' : 'free'}`}>
-              {anime.isPremium ? 'PREMIUM' : 'FREE'}
+            <div className="thumbnail-wrapper">
+              <div className={`badge-mini ${anime.isPremium ? 'premium' : 'free'}`}>
+                {anime.isPremium ? 'PREMIUM' : 'BEPUL'}
+              </div>
+              <img 
+                src={anime.thumbnail} 
+                alt={anime.title} 
+                onError={(e) => { e.target.src = 'https://via.placeholder.com/300x170/121212/e31e24?text=Anor+Motion'; }}
+              />
             </div>
-            <img src={anime.thumbnail} alt={anime.title} />
-            <div className="card-info">
-              <h3>{anime.title}</h3>
-              <p>ID: {anime.id} • {anime.year}</p>
-            </div>
-            <div className="card-actions" onClick={(e) => { e.stopPropagation(); toggleFavorite(anime.id); }}>
-              {favorites.includes(anime.id) ? '❤️' : '🤍'}
+            <div className="card-content">
+              <div className="card-main-info">
+                <h3>{anime.title}</h3>
+                <p>ID: {anime.id} • {anime.year}</p>
+              </div>
+              <div className="card-heart" onClick={(e) => { e.stopPropagation(); toggleFavorite(anime.id); }}>
+                {favorites.includes(anime.id) ? icons.heartFilled : icons.heart}
+              </div>
             </div>
           </div>
         ))}
@@ -125,8 +133,17 @@ function App() {
       <div className="anime-grid">
         {filteredMovies.map(anime => (
           <div key={anime.id} className="anime-card" onClick={() => openDetails(anime)}>
-            <img src={anime.thumbnail} alt={anime.title} />
-            <div className="card-info">
+            <div className="thumbnail-wrapper">
+              <div className={`badge-mini ${anime.isPremium ? 'premium' : 'free'}`}>
+                {anime.isPremium ? 'PREMIUM' : 'BEPUL'}
+              </div>
+              <img 
+                src={anime.thumbnail} 
+                alt={anime.title} 
+                onError={(e) => { e.target.src = 'https://via.placeholder.com/300x170/121212/e31e24?text=Anor+Motion'; }}
+              />
+            </div>
+            <div className="card-content">
               <h3>{anime.title}</h3>
               <p>{anime.year} • {anime.genres.join(', ')}</p>
             </div>
@@ -168,8 +185,15 @@ function App() {
       <div className="anime-grid">
         {animeData.filter(a => a.isPremium).map(anime => (
           <div key={anime.id} className="anime-card" onClick={() => openDetails(anime)}>
-            <img src={anime.thumbnail} alt={anime.title} />
-            <div className="card-info">
+            <div className="thumbnail-wrapper">
+              <div className="badge-mini premium">PREMIUM</div>
+              <img 
+                src={anime.thumbnail} 
+                alt={anime.title} 
+                onError={(e) => { e.target.src = 'https://via.placeholder.com/300x170/121212/e31e24?text=Anor+Motion'; }}
+              />
+            </div>
+            <div className="card-content">
               <h3>{anime.title}</h3>
             </div>
           </div>
@@ -249,6 +273,8 @@ function App() {
     premium: <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"></path><path d="M11 3v9"></path><path d="M15 3v4"></path><path d="M9 3v4"></path></svg>,
     profile: <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
     bell: <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
+    heart: <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>,
+    heartFilled: <svg viewBox="0 0 24 24" width="20" height="20" fill="#e31e24" stroke="#e31e24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>,
     userLg: <svg viewBox="0 0 24 24" width="60" height="60" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
   };
 

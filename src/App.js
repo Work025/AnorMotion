@@ -183,8 +183,8 @@ function App() {
       {!user ? (
         <div className="login-screen">
           <div className="logo-center">
-            <div className="logo">A</div>
-            <h1>ANOR | MOTION</h1>
+            <img src="/logo.png" alt="Anor Motion Logo" className="logo-img" />
+            <h1><span>ANOR</span> | MOTION</h1>
           </div>
           <div className="id-login">
             <p>ID orqali kirish:</p>
@@ -250,8 +250,10 @@ function App() {
   return (
     <div className="App">
       <header>
-        <div className="logo">A</div>
-        <div className="brand-name">ANOR | MOTION</div>
+        <div className="logo-container">
+          <img src="/logo.png" alt="Anor Motion Logo" className="logo-img" />
+        </div>
+        <div className="brand-name"><span>ANOR</span> | MOTION</div>
         <div className="header-icon">{icons.bell}</div>
       </header>
 
@@ -274,7 +276,8 @@ function App() {
           <span>Trailer</span>
         </button>
         <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')}>
-          <div className="home-circle">{icons.home}</div>
+          <i className="nav-icon">{icons.home}</i>
+          <span>Asosiy</span>
         </button>
         <button className={view === 'premium' ? 'active' : ''} onClick={() => setView('premium')}>
           <i className="nav-icon">{icons.premium}</i>

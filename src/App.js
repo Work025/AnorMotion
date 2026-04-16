@@ -248,19 +248,43 @@ function App() {
     </div>
   );
 
+  const handleWatchOnTelegram = () => {
+    if (tg && tg.openTelegramLink) {
+      // O'Z BOTINGIZ_USRENAME_NI_KIRITING
+      const botUsername = 'anormotionbot'; 
+      tg.openTelegramLink(`https://t.me/${botUsername}?start=anime_${selectedAnime.id}`);
+    } else {
+      alert("Iltimos, ilovani Telegram orqali oching!");
+    }
+  };
+
   const renderDetails = () => (
     <div className="details-view fadeIn">
       <button className="back-btn" onClick={() => setView('home')}>← Orqaga</button>
-      <div className="video-player">
-        <video key={videoLang} controls autoPlay src={videoLang === 'original' ? selectedAnime.originalVideoUrl : selectedAnime.uzbVideoUrl || selectedAnime.originalVideoUrl} />
+      <div className="video-player" style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+        <button 
+          onClick={handleWatchOnTelegram}
+          style={{
+            padding: '15px 30px', 
+            fontSize: '18px', 
+            fontWeight: 'bold', 
+            color: '#fff', 
+            background: '#e31e24', 
+            border: 'none', 
+            borderRadius: '8px', 
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: '0 4px 15px rgba(227, 30, 36, 0.4)'
+          }}
+        >
+          ▶ Telegram orqali ko'rish
+        </button>
       </div>
       <div className="details-info">
         <h1>{selectedAnime.title}</h1>
         <div className="meta">{selectedAnime.year} • {selectedAnime.genres.join(', ')}</div>
-        <div className="lang-btns">
-          <button className={videoLang === 'original' ? 'active' : ''} onClick={() => setVideoLang('original')}>Original</button>
-          <button className={videoLang === 'uzb' ? 'active' : ''} onClick={() => setVideoLang('uzb')}>O'zbekcha</button>
-        </div>
         <p>{selectedAnime.description}</p>
       </div>
     </div>

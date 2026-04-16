@@ -1,7 +1,33 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const videosFile = path.join(__dirname, 'videos.json');
 
+// Bazani o'qish funksiyasi
+function loadVideosStore() {
+  try {
+    if (fs.existsSync(videosFile)) {
+      return JSON.parse(fs.readFileSync(videosFile, 'utf8'));
+    }
+  } catch (error) {
+    console.error("videos.json o'qishda xatolik:", error);
+  }
+  return {};
+}
+
+// Bazaga yozish funksiyasi
+function saveVideosStore(data) {
+  try {
+    fs.writeFileSync(videosFile, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error("videos.json ga yozishda xatolik:", error);
+  }
+}
+
+// Admin sozlamalari (O'z Telegram username ingiz)
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "Fozilxon88"; 
 // Render uchun dummmy HTTP server (Free Tier uchun kerak)
 const port = process.env.PORT || 10000;
 http.createServer((req, res) => {
@@ -51,17 +77,71 @@ async function checkSubscription(userId) {
 }
 
 
-// /start komandasi
-bot.onText(/\/start/, async (msg) => {
+// /start komandasi anime ID parametrlari bilan
+bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
+  const commandParam = match[1];
 
   const isSubscribed = await checkSubscription(userId);
 
-  if (isSubscribed) {
+  if (!isSubscribed) {
+    return sendSubscriptionPrompt(chatId);
+  }
+
+  // Agar shunchaki start bosilsa
+  if (!commandParam) {
     sendMainMenu(chatId);
-  } else {
-    sendSubscriptionPrompt(chatId);
+  } 
+  // Agar /start anime_id ko'rinishida kelsa
+  else if (commandParam.startsWith('anime_')) {
+    const animeId = commandParam.replace('anime_', '');
+    const videosStore = loadVideosStore();
+    
+    const videoFileId = videosStore[animeId];
+
+    if (videoFileId) {
+        bot.sendMessage(chatId, "Yuklanmoqda... ⏳").then((waitMsg) => {
+        bot.sendVideo(chatId, videoFileId, {
+            caption: "🎬 Qidirgan anime-ingiz tayyor! Maroqli tomosha!"
+        }).then(() => {
+            bot.deleteMessage(chatId, waitMsg.message_id).catch(()=>{});
+        }).catch((err) => {
+            console.error(err);
+            bot.sendMessage(chatId, "Video yuborishda xatolik yuz berdi 😔");
+            bot.deleteMessage(chatId, waitMsg.message_id).catch(()=>{});
+        });
+        });
+    } else {
+        bot.sendMessage(chatId, "Kechirasiz, bu video xali bazamizga qo'shilmagan 😔");
+        sendMainMenu(chatId);
+    }
+  }
+});
+
+// Admin uchun video saqlash funksiyasi
+bot.on('message', (msg) => {
+  const chatId = msg.chat.id;
+  
+  // Faqat video va reply tahlil qilinadi
+  // msg.from.username @ siz yoziladi
+  if (msg.text && msg.text.startsWith('/setanime') && msg.from.username === ADMIN_USERNAME) {
+    if (msg.reply_to_message && msg.reply_to_message.video) {
+        const fileId = msg.reply_to_message.video.file_id;
+        const animeId = msg.text.split(' ')[1]; // masalan: /setanime 1
+        
+        if (!animeId) {
+            return bot.sendMessage(chatId, "XATO: Anime ID sini kiriting. Masalan: /setanime 1");
+        }
+        
+        const videosStore = loadVideosStore();
+        videosStore[animeId] = fileId;
+        saveVideosStore(videosStore);
+        
+        bot.sendMessage(chatId, `✅ Anime ID "${animeId}" bazaga saqlandi!\n\nFile ID: ${fileId}`);
+    } else {
+        bot.sendMessage(chatId, "XATO: Iltimos, /setanime ID buyrug'ini botga yuborgan videongizga *reply* (javob) qilib yozing!");
+    }
   }
 });
 

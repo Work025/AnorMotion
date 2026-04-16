@@ -7,6 +7,9 @@ const sharp = require('sharp');
 
 const dbFile = path.join(__dirname, 'anime_db.json');
 const uploadDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Adminlar ro'yxati
 const ADMINS = ['Fozilxon88', 'ZYRONIX_ADMIN'];
@@ -228,36 +231,46 @@ bot.onText(/\/setdelet-(\w+)/, (msg, match) => {
   }
 });
 
-// Foto yuklanganda (sharp bilan ishlov berish)
-bot.on('photo', async (msg) => {
+// Rasm va Fayllarni qayta ishlash funksiyasi
+async function handleImageUpload(msg, fileId) {
   const admin = botState.adminData[msg.from.id];
   if (!isAdmin(msg) || !admin || admin.action !== 'waiting_photo') return;
 
   try {
-    const photo = msg.photo[msg.photo.length - 1]; // Eng katta rasm
-    const file = await bot.getFile(photo.file_id);
-    const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
-
+    const localPath = await bot.downloadFile(fileId, uploadDir);
     const fileName = `${admin.activeAnimeId}_${Date.now()}.jpg`;
-    const localPath = path.join(uploadDir, fileName);
+    const finalPath = path.join(uploadDir, fileName);
 
-    // Rasmni yuklab olish va 800x800 kesish
-    const response = await fetch(fileUrl);
-    const buffer = Buffer.from(await response.arrayBuffer());
-
-    await sharp(buffer)
+    // Rasmni 800x800 kesish
+    await sharp(localPath)
       .resize(800, 800, { fit: 'cover', position: 'center' })
-      .toFile(localPath);
+      .toFile(finalPath);
+
+    // Vaqtinchalik yuklangan faylni o'chirish
+    if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
 
     const db = loadDB();
     db[admin.activeAnimeId].image = `/uploads/${fileName}`;
     saveDB(db);
 
     admin.action = 'none';
-    bot.sendMessage(msg.chat.id, "✅ Rasm yuklandi va 800x800 o'lchamga keltirildi!");
+    bot.sendMessage(msg.chat.id, "✅ Rasm muvaffaqiyatli yuklandi va 800x800 o'lchamga keltirildi!");
   } catch (error) {
-    console.error(error);
-    bot.sendMessage(msg.chat.id, "❌ Rasmni saqlashda xatolik yuz berdi.");
+    console.error("Upload Error:", error);
+    bot.sendMessage(msg.chat.id, "❌ Rasmni yuklash yoki kesishda xatolik yuz berdi. Iltimos, qayta urinib ko'ring.");
+  }
+}
+
+// Foto yuklanganda
+bot.on('photo', async (msg) => {
+  const photo = msg.photo[msg.photo.length - 1];
+  await handleImageUpload(msg, photo.file_id);
+});
+
+// Fayl (Document) yuklanganda
+bot.on('document', async (msg) => {
+  if (msg.document && msg.document.mime_type && msg.document.mime_type.startsWith('image/')) {
+    await handleImageUpload(msg, msg.document.file_id);
   }
 });
 

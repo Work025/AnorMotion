@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { animeData, trailerData, genres, years } from './data';
+import { animeData, genres, years } from './data';
 
 const tg = window.Telegram.WebApp;
 
@@ -10,7 +10,7 @@ function App() {
   const [selectedAnime, setSelectedAnime] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState([]);
-  const [videoLang, setVideoLang] = useState('original');
+
   const [filterGenre, setFilterGenre] = useState('Barchasi');
   const [filterYear, setFilterYear] = useState('Barchasi');
   const [promoCode, setPromoCode] = useState('');

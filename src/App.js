@@ -153,19 +153,7 @@ function App() {
     </div>
   );
 
-  const renderTrailers = () => (
-    <div className="view-content fadeIn">
-      <div className="section-title">Trailerlar</div>
-      <div className="trailer-list">
-        {trailerData.map(t => (
-          <div key={t.id} className="trailer-card">
-            <video src={t.videoUrl} controls poster={t.thumbnail} />
-            <h3>{t.title}</h3>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+
 
   const renderPremium = () => (
     <div className="view-content fadeIn premium-view">
@@ -320,7 +308,7 @@ function App() {
       <main>
         {view === 'home' && renderHome()}
         {view === 'search' && renderSearch()}
-        {view === 'trailers' && renderTrailers()}
+
         {view === 'premium' && renderPremium()}
         {view === 'profile' && renderProfile()}
         {view === 'details' && renderDetails()}
@@ -331,10 +319,7 @@ function App() {
           <i className="nav-icon">{icons.search}</i>
           <span>Qidiruv</span>
         </button>
-        <button className={view === 'trailers' ? 'active' : ''} onClick={() => setView('trailers')}>
-          <i className="nav-icon">{icons.trailers}</i>
-          <span>Trailer</span>
-        </button>
+
         <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')}>
           <i className="nav-icon">{icons.home}</i>
           <span>Asosiy</span>

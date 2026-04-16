@@ -332,6 +332,20 @@ bot.on('document', async (msg) => {
   }
 });
 
+// /status
+bot.onText(/\/status/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  const dbState = mongoose.connection.readyState;
+  const states = {
+    0: "🔴 Ulangan emas (Disconnected)",
+    1: "🟢 Ulangan (Connected)",
+    2: "🟡 Ulanmoqda (Connecting)",
+    3: "🟠 Uzilmoqda (Disconnecting)"
+  };
+  
+  bot.sendMessage(msg.chat.id, `🤖 *Bot Status:* \n\n🔹 Holat: ${botState.isStopped ? 'Muzlatilgan' : 'Faol'}\n🔹 Baza: ${states[dbState] || 'Noma\'lum'}\n\nAgarda baza statusi qizil bo'lsa, demak parolda yoki IP ruxsatida (0.0.0.0/0) xato bor.`, { parse_mode: 'Markdown' });
+});
+
 // callback_query uchun (Admin help tugmasi)
 bot.on('callback_query', (cb) => {
   if (cb.data === 'admin_help') {

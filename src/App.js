@@ -5,12 +5,11 @@ import { animeData, genres, years } from './data';
 const tg = window.Telegram.WebApp;
 
 function App() {
-  const [view, setView] = useState('home'); 
+  const [view, setView] = useState('home');
   const [user, setUser] = useState(null); // { id: 'A|...|M', isPremium: false }
   const [selectedAnime, setSelectedAnime] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState([]);
-
   const [filterGenre, setFilterGenre] = useState('Barchasi');
   const [filterYear, setFilterYear] = useState('Barchasi');
   const [promoCode, setPromoCode] = useState('');
@@ -91,9 +90,9 @@ function App() {
               <div className={`badge-mini ${anime.isPremium ? 'premium' : 'free'}`}>
                 {anime.isPremium ? 'PREMIUM' : 'BEPUL'}
               </div>
-              <img 
-                src={anime.thumbnail} 
-                alt={anime.title} 
+              <img
+                src={anime.thumbnail}
+                alt={anime.title}
                 onError={(e) => { e.target.src = 'https://via.placeholder.com/300x170/121212/e31e24?text=Anor+Motion'; }}
               />
             </div>
@@ -115,9 +114,9 @@ function App() {
   const renderSearch = () => (
     <div className="view-content fadeIn">
       <div className="search-header">
-        <input 
-          type="text" 
-          placeholder="Qidiruv..." 
+        <input
+          type="text"
+          placeholder="Qidiruv..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -137,9 +136,9 @@ function App() {
               <div className={`badge-mini ${anime.isPremium ? 'premium' : 'free'}`}>
                 {anime.isPremium ? 'PREMIUM' : 'BEPUL'}
               </div>
-              <img 
-                src={anime.thumbnail} 
-                alt={anime.title} 
+              <img
+                src={anime.thumbnail}
+                alt={anime.title}
                 onError={(e) => { e.target.src = 'https://via.placeholder.com/300x170/121212/e31e24?text=Anor+Motion'; }}
               />
             </div>
@@ -162,9 +161,9 @@ function App() {
         <p>Barcha animelarni reklamasiz va cheklovsiz ko'ring!</p>
       </div>
       <div className="promo-section">
-        <input 
-          type="text" 
-          placeholder="Promo kod..." 
+        <input
+          type="text"
+          placeholder="Promo kod..."
           value={promoCode}
           onChange={(e) => setPromoCode(e.target.value)}
         />
@@ -175,9 +174,9 @@ function App() {
           <div key={anime.id} className="anime-card" onClick={() => openDetails(anime)}>
             <div className="thumbnail-wrapper">
               <div className="badge-mini premium">PREMIUM</div>
-              <img 
-                src={anime.thumbnail} 
-                alt={anime.title} 
+              <img
+                src={anime.thumbnail}
+                alt={anime.title}
                 onError={(e) => { e.target.src = 'https://via.placeholder.com/300x170/121212/e31e24?text=Anor+Motion'; }}
               />
             </div>
@@ -195,10 +194,10 @@ function App() {
       {!user ? (
         <div className="login-screen profile-bg">
           <div className="logo-center">
-            <img 
-              src="/logo.png" 
-              alt="Anor Motion Logo" 
-              className="logo-img" 
+            <img
+              src="/logo.png"
+              alt="Anor Motion Logo"
+              className="logo-img"
               onError={(e) => { e.target.style.display = 'none'; }}
             />
             <h1><span>ANOR</span> | MOTION</h1>
@@ -207,9 +206,9 @@ function App() {
             <p>ID orqali kirish:</p>
             <div className="id-input-wrapper">
               <span className="prefix">A|</span>
-              <input 
-                type="text" 
-                placeholder="Kod" 
+              <input
+                type="text"
+                placeholder="Kod"
                 value={loginId.replace('A|', '').replace('|M', '')}
                 onChange={(e) => setLoginId(`A|${e.target.value}|M`)}
               />
@@ -239,7 +238,7 @@ function App() {
   const handleWatchOnTelegram = () => {
     if (tg && tg.openTelegramLink) {
       // O'Z BOTINGIZ_USRENAME_NI_KIRITING
-      const botUsername = 'anormotionbot'; 
+      const botUsername = 'anormotionbot';
       tg.openTelegramLink(`https://t.me/${botUsername}?start=anime_${selectedAnime.id}`);
     } else {
       alert("Iltimos, ilovani Telegram orqali oching!");
@@ -249,17 +248,17 @@ function App() {
   const renderDetails = () => (
     <div className="details-view fadeIn">
       <button className="back-btn" onClick={() => setView('home')}>← Orqaga</button>
-      <div className="video-player" style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-        <button 
+      <div className="video-player" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button
           onClick={handleWatchOnTelegram}
           style={{
-            padding: '15px 30px', 
-            fontSize: '18px', 
-            fontWeight: 'bold', 
-            color: '#fff', 
-            background: '#e31e24', 
-            border: 'none', 
-            borderRadius: '8px', 
+            padding: '15px 30px',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: '#fff',
+            background: '#e31e24',
+            border: 'none',
+            borderRadius: '8px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -294,10 +293,10 @@ function App() {
     <div className="App">
       <header>
         <div className="logo-container">
-          <img 
-            src="/logo.png" 
-            alt="Anor Motion" 
-            className="logo-img" 
+          <img
+            src="/logo.png"
+            alt="Anor Motion"
+            className="logo-img"
             onError={(e) => { e.target.style.display = 'none'; }}
           />
         </div>

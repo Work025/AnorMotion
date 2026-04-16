@@ -124,7 +124,8 @@ function App() {
                 {/* Rasm ustidagi ma'lumotlar */}
                 <div className="card-overlay">
                   <div className="overlay-info">
-                    <span>{anime.year}</span>
+                    <span>{anime.year || '2024'}</span>
+                    <span>{anime.country || 'Yaponiya'}</span>
                     <span>{anime.genres?.split(',')[0]}</span>
                   </div>
                 </div>

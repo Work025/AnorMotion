@@ -4,8 +4,39 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
+const mongoose = require('mongoose');
 
-const dbFile = path.join(__dirname, 'anime_db.json');
+// MongoDB ulanishi
+const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://worknotivo_db_user:<db_password>@anivo.8zlwakg.mongodb.net/anor_motion?retryWrites=true&w=majority';
+
+mongoose.connect(mongoURI)
+  .then(() => console.log("MongoDB-ga muvaffaqiyatli ulandi."))
+  .catch(err => console.error("MongoDB ulanish xatosi:", err));
+
+// Anime Schema
+const contentSchema = new mongoose.Schema({
+  fileId: String,
+  season: Number,
+  part: Number,
+  episode: Number,
+  film: Number,
+  addedAt: { type: Date, default: Date.now }
+});
+
+const animeSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  title: String,
+  year: String,
+  genres: String,
+  country: String,
+  image: String,
+  order: { type: Number, default: 0 },
+  isPremium: { type: Boolean, default: false },
+  description: String,
+  content: [contentSchema]
+});
+
+const Anime = mongoose.model('Anime', animeSchema);
 const uploadDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -17,23 +48,8 @@ const ADMINS = ['Fozilxon88', 'ZYRONIX_ADMIN'];
 // Bot holati (State)
 let botState = {
   isStopped: false,
-  adminData: {} // { userId: { activeAnimeId: '1', action: 'none' } }
+  adminData: {} 
 };
-
-// Bazani yuklash
-function loadDB() {
-  try {
-    if (fs.existsSync(dbFile)) {
-      return JSON.parse(fs.readFileSync(dbFile, 'utf8'));
-    }
-  } catch (e) { console.error("DB Error:", e); }
-  return {};
-}
-
-// Bazani saqlash
-function saveDB(data) {
-  fs.writeFileSync(dbFile, JSON.stringify(data, null, 2));
-}
 
 const token = process.env.BOT_TOKEN;
 const bot = new TelegramBot(token, { polling: true });
@@ -46,8 +62,16 @@ http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
   if (req.url === '/api/data') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify(loadDB()));
+    try {
+      const animes = await Anime.find({}).sort({ order: 1 });
+      const data = {};
+      animes.forEach(a => { data[a.id] = a; });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify(data));
+    } catch (err) {
+      res.writeHead(500);
+      return res.end("Database Error");
+    }
   }
 
   // Statik rasmlarni uzatish (/uploads/...)
@@ -130,51 +154,76 @@ bot.onText(/\/STOP/, (msg) => {
 });
 
 // /setanime <ID>
-bot.onText(/\/setanime (\w+)/, (msg, match) => {
+bot.onText(/\/setanime (\w+)/, async (msg, match) => {
   if (!isAdmin(msg)) return;
   const id = match[1];
   const userId = msg.from.id;
   
   botState.adminData[userId] = { activeAnimeId: id, action: 'none' };
   
-  const db = loadDB();
-  if (!db[id]) {
-    db[id] = { id, title: '', year: '', genres: '', image: '', order: 0, content: [] };
-    saveDB(db);
+  try {
+    let anime = await Anime.findOne({ id });
+    if (!anime) {
+      anime = new Anime({ id, title: '', year: '', genres: '', country: '', image: '', order: 0 });
+      await anime.save();
+    }
+    bot.sendMessage(msg.chat.id, `✅ Anime ID: ${id} tanlandi. Endi ma'lumotlarni kiriting.`);
+  } catch (err) {
+    bot.sendMessage(msg.chat.id, "❌ Bazaga ulanishda xatolik.");
   }
-  
-  bot.sendMessage(msg.chat.id, `✅ Anime ID: ${id} tanlandi. Endi ma'lumotlarni kiriting.`);
 });
 
 // /setanime-nomi
-bot.onText(/\/setanime-nomi (.+)/, (msg, match) => {
+bot.onText(/\/setanime-nomi (.+)/, async (msg, match) => {
   if (!isAdmin(msg)) return;
   const admin = botState.adminData[msg.from.id];
-  if (!admin) {
-    return bot.sendMessage(msg.chat.id, "❌ Avval /setanime ID buyrug'ini bering.");
-  }
-  const db = loadDB();
-  db[admin.activeAnimeId].title = match[1];
-  saveDB(db);
-  bot.sendMessage(msg.chat.id, `✅ Nomi sozlandi: ${match[1]}`);
+  if (!admin) return bot.sendMessage(msg.chat.id, "❌ Avval /setanime ID buyrug'ini bering.");
+  
+  try {
+    const anime = await Anime.findOne({ id: admin.activeAnimeId });
+    if (anime) {
+      anime.title = match[1];
+      await anime.save();
+      bot.sendMessage(msg.chat.id, `✅ Nomi sozlandi: ${match[1]}`);
+    }
+  } catch (err) { bot.sendMessage(msg.chat.id, "❌ Xatolik yuz berdi."); }
 });
 
-// /setanime-yili, -janir, -joyi (Bir xil logika)
+// /setanime-yili, -janir, -joyi, -davlati
 const settings = {
   'setanime-yili': 'year',
   'setanime-janir': 'genres',
-  'setanime-joyi': 'order'
+  'setanime-joyi': 'order',
+  'setanime-davlati': 'country'
 };
 
 Object.keys(settings).forEach(cmd => {
-  bot.onText(new RegExp(`\\/${cmd} (.+)`), (msg, match) => {
+  bot.onText(new RegExp(`\\/${cmd} (.+)`), async (msg, match) => {
+    if (!isAdmin(msg)) return;
     const admin = botState.adminData[msg.from.id];
-    if (!isAdmin(msg) || !admin) return;
-    const db = loadDB();
-    db[admin.activeAnimeId][settings[cmd]] = match[1];
-    saveDB(db);
-    bot.sendMessage(msg.chat.id, `✅ ${settings[cmd]} yangilandi.`);
+    if (!admin) return bot.sendMessage(msg.chat.id, "❌ Avval /setanime ID buyrug'ini bering.");
+    
+    try {
+      const anime = await Anime.findOne({ id: admin.activeAnimeId });
+      if (anime) {
+        anime[settings[cmd]] = match[1];
+        await anime.save();
+        bot.sendMessage(msg.chat.id, `✅ ${settings[cmd]} yangilandi.`);
+      }
+    } catch (err) { bot.sendMessage(msg.chat.id, "❌ Xatolik yuz berdi."); }
   });
+});
+// /setdetails <ID> | <Nomi> | <Yili> | <Davlati> | <Janri>
+bot.onText(/\/setdetails (.+)/, async (msg, match) => {
+  if (!isAdmin(msg)) return;
+  const parts = match[1].split('|').map(p => p.trim());
+  if (parts.length < 5) return bot.sendMessage(msg.chat.id, "❌ Format: ID | Nomi | Yili | Davlati | Janri");
+  
+  const [id, title, year, country, genres] = parts;
+  try {
+    await Anime.findOneAndUpdate({ id }, { title, year, country, genres }, { upsert: true });
+    bot.sendMessage(msg.chat.id, `✅ Anime ${id} uchun barcha ma'lumotlar saqlandi!`);
+  } catch (err) { bot.sendMessage(msg.chat.id, "❌ Xatolik."); }
 });
 
 // /setanime-img
@@ -189,52 +238,53 @@ bot.onText(/\/setanime-img/, (msg) => {
 });
 
 // /setvideo (Reply qilingan video uchun)
-bot.onText(/\/setvideo (.+)/, (msg, match) => {
+bot.onText(/\/setvideo (.+)/, async (msg, match) => {
   if (!isAdmin(msg)) return;
   if (!msg.reply_to_message || !msg.reply_to_message.video) {
     return bot.sendMessage(msg.chat.id, "❌ Iltimos, videoga Reply qilib yozing.");
   }
 
   const tags = parseContentTag(match[1]);
-  const animeId = match[1].split(' ')[0]; // Birinchi kelgan son ID deb olinadi
+  const animeId = match[1].split(' ')[0];
   const fileId = msg.reply_to_message.video.file_id;
 
-  const db = loadDB();
-  if (!db[animeId]) return bot.sendMessage(msg.chat.id, "❌ Bu ID li anime topilmadi.");
+  try {
+    const anime = await Anime.findOne({ id: animeId });
+    if (!anime) return bot.sendMessage(msg.chat.id, "❌ Bu ID li anime topilmadi.");
 
-  const newItem = {
-    fileId,
-    season: tags.season,
-    part: tags.part,
-    episode: tags.episode,
-    film: tags.film,
-    addedAt: new Date().toISOString()
-  };
+    const newItem = {
+      fileId,
+      season: tags.season,
+      part: tags.part,
+      episode: tags.episode,
+      film: tags.film
+    };
 
-  db[animeId].content.push(newItem);
-  // Tartiblash logikasi (ixtiyoriy)
-  saveDB(db);
-  bot.sendMessage(msg.chat.id, `✅ Video saqlandi! [S:${tags.season} P:${tags.part} E:${tags.episode}]`);
+    anime.content.push(newItem);
+    await anime.save();
+    bot.sendMessage(msg.chat.id, `✅ Video saqlandi! [S:${tags.season} E:${tags.episode}]`);
+  } catch (err) { bot.sendMessage(msg.chat.id, "❌ Xatolik yuz berdi."); }
 });
 
 // /animes
-bot.onText(/\/animes/, (msg) => {
+bot.onText(/\/animes/, async (msg) => {
   if (!isAdmin(msg)) return;
-  const db = loadDB();
-  const list = Object.values(db).map(a => `${a.id}: ${a.title}`).join('\n') || "Hali animelar yo'q.";
-  bot.sendMessage(msg.chat.id, `📂 *Baza:* \n\n${list}`, { parse_mode: 'Markdown' });
+  try {
+    const animes = await Anime.find({});
+    const list = animes.map(a => `${a.id}: ${a.title}`).join('\n') || "Hali animelar yo'q.";
+    bot.sendMessage(msg.chat.id, `📂 *Baza (MongoDB):* \n\n${list}`, { parse_mode: 'Markdown' });
+  } catch (err) { bot.sendMessage(msg.chat.id, "❌ Bazani o'qib bo'lmadi."); }
 });
 
 // /setdelet-<id>
-bot.onText(/\/setdelet-(\w+)/, (msg, match) => {
+bot.onText(/\/setdelet-(\w+)/, async (msg, match) => {
   if (!isAdmin(msg)) return;
-  const id = match[1];
-  const db = loadDB();
-  if (db[id]) {
-    delete db[id];
-    saveDB(db);
-    bot.sendMessage(msg.chat.id, `🗑 Anime ID: ${id} o'chirildi.`);
-  }
+  try {
+    const result = await Anime.findOneAndDelete({ id: match[1] });
+    if (result) {
+      bot.sendMessage(msg.chat.id, `🗑 Anime ID: ${match[1]} o'chirildi.`);
+    }
+  } catch (err) { bot.sendMessage(msg.chat.id, "❌ Xatolik."); }
 });
 
 // Rasm va Fayllarni qayta ishlash funksiyasi
@@ -255,9 +305,11 @@ async function handleImageUpload(msg, fileId) {
     // Vaqtinchalik yuklangan faylni o'chirish
     if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
 
-    const db = loadDB();
-    db[admin.activeAnimeId].image = `/uploads/${fileName}`;
-    saveDB(db);
+    const anime = await Anime.findOne({ id: admin.activeAnimeId });
+    if (anime) {
+      anime.image = `/uploads/${fileName}`;
+      await anime.save();
+    }
 
     admin.action = 'none';
     bot.sendMessage(msg.chat.id, "✅ Rasm muvaffaqiyatli yuklandi va 800x800 o'lchamga keltirildi!");

@@ -1,0 +1,26 @@
+ANOR MOTION - ADMIN BUYRUQLARI RO'YXATI
+========================================
+
+Ushbu buyruqlar faqat adminlar (@Fozilxon88 va @ZYRONIX_ADMIN) uchun ishlaydi.
+
+1. /admin
+   - Vazifasi: Barcha admin buyruqlari haqida ma'lumot olish.
+
+2. /setanime <ID>
+   - Vazifasi: Animening video faylini (File ID) bazaga saqlash.
+   - Ishlatish: Botga video yuboring va o'sha videoga "Reply" (Javob berish) qilib, "/setanime 1" deb yozing.
+
+3. /setdetails <ID> | <Nomi> | <Yili> | <Davlati> | <Tavsifi> | <Rasm_URL>
+   - Vazifasi: Animening Mini App'da ko'rinadigan ma'lumotlarini sozlash.
+   - Ishlatish: /setdetails 1 | Naruto Shippuden | 2007 | Yaponiya | Uzun sarguzasht... | https://rasm.uz/img.jpg
+   - DIQQAT: Har bir ma'lumotni "|" (pipe) belgisi bilan ajratib yozing.
+
+4. /delanime <ID>
+   - Vazifasi: Animeni (video va ma'lumotlarini) bazadan butunlay o'chirish.
+   - Ishlatish: /delanime 1
+
+5. /animes
+   - Vazifasi: Hozirda bazada mavjud bo'lgan barcha animelar ro'yxati va ularning ID raqamlarini ko'rish.
+
+6. /start
+   - Vazifasi: Oddiy foydalanuvchilar uchun Mini App menyusini chiqaradi. Adminlar uchun qo'shimcha "Admin Panel" tugmasini ham yuklaydi.

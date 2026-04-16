@@ -15,8 +15,32 @@ function App() {
   const [promoCode, setPromoCode] = useState('');
   const [loginId, setLoginId] = useState('');
 
+  const [animeList, setAnimeList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // BOT_URL - Botingiz ishlayotgan server manzili
+  const BOT_URL = 'https://anor-motion-bot.onrender.com'; 
+
   useEffect(() => {
     tg.expand();
+    
+    // Ma'lumotlarni botdan yuklash
+    async function fetchData() {
+      try {
+        const res = await fetch(`${BOT_URL}/api/data`);
+        const data = await res.json();
+        // Object ni Array ga aylantirish va tartiblash
+        const list = Object.values(data).sort((a, b) => (a.order || 0) - (b.order || 0));
+        setAnimeList(list);
+      } catch (e) {
+        console.error("Fetch error:", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+
     const savedUser = JSON.parse(localStorage.getItem('user'));
     const savedFavs = JSON.parse(localStorage.getItem('favorites') || '[]');
     if (savedUser) setUser(savedUser);
@@ -81,33 +105,43 @@ function App() {
   });
 
   const renderHome = () => (
-    <div className="view-content fadeIn">
+    <div className="view-content">
       <div className="section-title">Eng so'nggi animelar</div>
-      <div className="anime-grid">
-        {animeData.map(anime => (
-          <div key={anime.id} className="anime-card" onClick={() => openDetails(anime)}>
-            <div className="thumbnail-wrapper">
-              <div className={`badge-mini ${anime.isPremium ? 'premium' : 'free'}`}>
-                {anime.isPremium ? 'PREMIUM' : 'BEPUL'}
+      {loading ? (
+        <div className="loading">Yuklanmoqda...</div>
+      ) : (
+        <div className="anime-grid">
+          {animeList.map(anime => (
+            <div key={anime.id} className="anime-card" onClick={() => openDetails(anime)}>
+              <div className="thumbnail-wrapper">
+                <div className={`badge-mini ${anime.isPremium ? 'premium' : 'free'}`}>
+                  {anime.isPremium ? 'PREMIUM' : 'BEPUL'}
+                </div>
+                <img 
+                  src={anime.image ? `${BOT_URL}${anime.image}` : 'https://via.placeholder.com/300x300/121212/e31e24?text=Anor+Motion'} 
+                  alt={anime.title} 
+                />
+                {/* Rasm ustidagi ma'lumotlar */}
+                <div className="card-overlay">
+                  <div className="overlay-info">
+                    <span>{anime.year}</span>
+                    <span>{anime.genres?.split(',')[0]}</span>
+                  </div>
+                </div>
               </div>
-              <img
-                src={anime.thumbnail}
-                alt={anime.title}
-                onError={(e) => { e.target.src = 'https://via.placeholder.com/300x170/121212/e31e24?text=Anor+Motion'; }}
-              />
+              <div className="card-content">
+                <div className="card-main-info">
+                  <h3>{anime.title || 'Nomsiz Anime'}</h3>
+                  <p>ID: {anime.id}</p>
+                </div>
+                <div className="card-heart" onClick={(e) => { e.stopPropagation(); toggleFavorite(anime.id); }}>
+                  {favorites.includes(anime.id) ? icons.heartFilled : icons.heart}
+                </div>
+              </div>
             </div>
-            <div className="card-content">
-              <div className="card-main-info">
-                <h3>{anime.title}</h3>
-                <p>ID: {anime.id} • {anime.year}</p>
-              </div>
-              <div className="card-heart" onClick={(e) => { e.stopPropagation(); toggleFavorite(anime.id); }}>
-                {favorites.includes(anime.id) ? icons.heartFilled : icons.heart}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 

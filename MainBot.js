@@ -3,226 +3,268 @@ const TelegramBot = require('node-telegram-bot-api');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const videosFile = path.join(__dirname, 'videos.json');
+const sharp = require('sharp');
 
-// Bazani o'qish funksiyasi
-function loadVideosStore() {
+const dbFile = path.join(__dirname, 'anime_db.json');
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+
+// Adminlar ro'yxati
+const ADMINS = ['Fozilxon88', 'ZYRONIX_ADMIN'];
+
+// Bot holati (State)
+let botState = {
+  isStopped: false,
+  adminData: {} // { userId: { activeAnimeId: '1', action: 'none' } }
+};
+
+// Bazani yuklash
+function loadDB() {
   try {
-    if (fs.existsSync(videosFile)) {
-      return JSON.parse(fs.readFileSync(videosFile, 'utf8'));
+    if (fs.existsSync(dbFile)) {
+      return JSON.parse(fs.readFileSync(dbFile, 'utf8'));
     }
-  } catch (error) {
-    console.error("videos.json o'qishda xatolik:", error);
-  }
+  } catch (e) { console.error("DB Error:", e); }
   return {};
 }
 
-// Bazaga yozish funksiyasi
-function saveVideosStore(data) {
-  try {
-    fs.writeFileSync(videosFile, JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error("videos.json ga yozishda xatolik:", error);
-  }
+// Bazani saqlash
+function saveDB(data) {
+  fs.writeFileSync(dbFile, JSON.stringify(data, null, 2));
 }
 
-// Admin sozlamalari (O'z Telegram username ingiz)
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "Fozilxon88"; 
-// Render uchun dummmy HTTP server (Free Tier uchun kerak)
-const port = process.env.PORT || 10000;
-http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Bot ishlayapti...\n');
-}).listen(port);
-
-console.log(`HTTP server ${port}-portda ishlamoqda.`);
-
-// Tokenni o'rnating
 const token = process.env.BOT_TOKEN;
-
-if (!token) {
-  console.error("Xatolik: .env faylida BOT_TOKEN topilmadi!");
-  process.exit(1);
-}
-
-// Botni polling rejimi bilan ishga tushiring
 const bot = new TelegramBot(token, { polling: true });
 
-// Obuna bo'lish kerak bo'lgan kanallar ro'yxati (Faqat @username ko'rinishida yozing)
-const channels = ['@websitemake025', '@Fimodauz'];
+// HTTP Server - API va Rasmlar uchun
+const port = process.env.PORT || 10000;
+http.createServer(async (req, res) => {
+  // CORS ruxsati
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
-console.log('Bot ishga tushdi...');
+  if (req.url === '/api/data') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify(loadDB()));
+  }
 
-// Obunani tekshirish funksiyasi
-async function checkSubscription(userId) {
-  console.log(`User ${userId} uchun obuna tekshirilmoqda...`);
-  for (const channel of channels) {
-    try {
-      const member = await bot.getChatMember(channel, userId);
-      console.log(`Kanal: ${channel}, Status: ${member.status}`);
-      
-      // Agar foydalanuvchi asoschi yoki admin bo'lsa, obuna bo'lgan hisoblanadi
-      if (['creator', 'administrator', 'member'].includes(member.status)) {
-        continue; // Keyingi kanalga o'tish
-      } else {
-        return false; // Obuna bo'lmagan (left, kicked)
-      }
-    } catch (error) {
-      console.error(`${channel} kanalini tekshirishda xatolik:`, error.message);
-      // Agar kanal topilmasa yoki boshqa xato bo'lsa, uni o'tkazib yuboramiz (ixtiyoriy)
-      // return false; // Agar xohlasangiz, xatolikda qaytarib yuboring
+  // Statik rasmlarni uzatish (/uploads/...)
+  if (req.url.startsWith('/uploads/')) {
+    const filePath = path.join(__dirname, 'public', req.url);
+    if (fs.existsSync(filePath)) {
+      res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+      return fs.createReadStream(filePath).pipe(res);
     }
   }
-  return true;
+
+  res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+  res.end('Anor Motion API ishlamoqda...');
+}).listen(port);
+
+console.log(`Server ${port}-portda ishlamoqda.`);
+
+// Admin tekshiruvi
+function isAdmin(msg) {
+  return msg.from && msg.from.username && ADMINS.includes(msg.from.username);
 }
 
+// Belgilarni parsing qilish funksiyasi
+function parseContentTag(text) {
+  // | -> season, [] -> part, () -> episode, {} -> film
+  const seasonMatch = text.match(/(\d+)\s*\|/);
+  const partMatch = text.match(/\[(\d+)\]/);
+  const episodeMatch = text.match(/\((\d+)\)/);
+  const filmMatch = text.match(/\{(\d+)\}/);
 
-// /start komandasi anime ID parametrlari bilan
-bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
-  const chatId = msg.chat.id;
+  return {
+    season: seasonMatch ? parseInt(seasonMatch[1]) : null,
+    part: partMatch ? parseInt(partMatch[1]) : null,
+    episode: episodeMatch ? parseInt(episodeMatch[1]) : null,
+    film: filmMatch ? parseInt(filmMatch[1]) : null
+  };
+}
+
+// /start buyrug'i
+bot.onText(/\/start/, (msg) => {
+  if (botState.isStopped && !isAdmin(msg)) return;
+  botState.isStopped = false;
+
+  const opts = {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🍎 Mini App", web_app: { url: 'https://anor-motion.vercel.app' } }],
+        isAdmin(msg) ? [{ text: "🛠 Admin Help", callback_data: 'admin_help' }] : []
+      ].filter(r => r.length > 0)
+    }
+  };
+  bot.sendMessage(msg.chat.id, "Xush kelibsiz! Animelarni ko'rish uchun ilovani oching:", opts);
+});
+
+// /adminhelp
+bot.onText(/\/adminhelp/, (msg) => {
+  if (!isAdmin(msg)) return;
+  const helpText = `🛠 *Admin Buyruqlari:*
+
+/setanime <ID> - Animeni tanlash (Masalan: /setanime 1)
+/setanime-nomi <Nomi>
+/setanime-yili <Yili>
+/setanime-janir <Janrlar>
+/setanime-joyi <Tartibi>
+/setanime-img - Rasm yuboring (800x800 kesiladi)
+/setvideo <ID> | (Qism) - Videoga reply qilib yozing
+/setoragajoylash - O'rtaga qism qo'shish
+/setdelet-1 - ID-1 ni butunlay o'chirish
+/setstop - Animeni tahrirlashni yakunlash
+/STOP - Botni qotirish
+/animes - Barcha animelar ro'yxati`;
+  bot.sendMessage(msg.chat.id, helpText, { parse_mode: 'Markdown' });
+});
+
+// /STOP
+bot.onText(/\/STOP/, (msg) => {
+  if (!isAdmin(msg)) return;
+  botState.isStopped = true;
+  bot.sendMessage(msg.chat.id, "🛑 Bot qotirildi. Qayta ishga tushirish uchun /start bosing.");
+});
+
+// /setanime <ID>
+bot.onText(/\/setanime (\w+)/, (msg, match) => {
+  if (!isAdmin(msg)) return;
+  const id = match[1];
   const userId = msg.from.id;
-  const commandParam = match[1];
-
-  const isSubscribed = await checkSubscription(userId);
-
-  if (!isSubscribed) {
-    return sendSubscriptionPrompt(chatId);
-  }
-
-  // Agar shunchaki start bosilsa
-  if (!commandParam) {
-    sendMainMenu(chatId);
-  } 
-  // Agar /start anime_id ko'rinishida kelsa
-  else if (commandParam.startsWith('anime_')) {
-    const animeId = commandParam.replace('anime_', '');
-    const videosStore = loadVideosStore();
-    
-    const videoFileId = videosStore[animeId];
-
-    if (videoFileId) {
-        bot.sendMessage(chatId, "Yuklanmoqda... ⏳").then((waitMsg) => {
-        bot.sendVideo(chatId, videoFileId, {
-            caption: "🎬 Qidirgan anime-ingiz tayyor! Maroqli tomosha!"
-        }).then(() => {
-            bot.deleteMessage(chatId, waitMsg.message_id).catch(()=>{});
-        }).catch((err) => {
-            console.error(err);
-            bot.sendMessage(chatId, "Video yuborishda xatolik yuz berdi 😔");
-            bot.deleteMessage(chatId, waitMsg.message_id).catch(()=>{});
-        });
-        });
-    } else {
-        bot.sendMessage(chatId, "Kechirasiz, bu video xali bazamizga qo'shilmagan 😔");
-        sendMainMenu(chatId);
-    }
-  }
-});
-
-// Admin uchun video saqlash funksiyasi
-bot.on('message', (msg) => {
-  const chatId = msg.chat.id;
   
-  // Faqat video va reply tahlil qilinadi
-  // msg.from.username @ siz yoziladi
-  if (msg.text && msg.text.startsWith('/setanime') && msg.from.username === ADMIN_USERNAME) {
-    if (msg.reply_to_message && msg.reply_to_message.video) {
-        const fileId = msg.reply_to_message.video.file_id;
-        const animeId = msg.text.split(' ')[1]; // masalan: /setanime 1
-        
-        if (!animeId) {
-            return bot.sendMessage(chatId, "XATO: Anime ID sini kiriting. Masalan: /setanime 1");
-        }
-        
-        const videosStore = loadVideosStore();
-        videosStore[animeId] = fileId;
-        saveVideosStore(videosStore);
-        
-        bot.sendMessage(chatId, `✅ Anime ID "${animeId}" bazaga saqlandi!\n\nFile ID: ${fileId}`);
-    } else {
-        bot.sendMessage(chatId, "XATO: Iltimos, /setanime ID buyrug'ini botga yuborgan videongizga *reply* (javob) qilib yozing!");
-    }
+  botState.adminData[userId] = { activeAnimeId: id, action: 'none' };
+  
+  const db = loadDB();
+  if (!db[id]) {
+    db[id] = { id, title: '', year: '', genres: '', image: '', order: 0, content: [] };
+    saveDB(db);
+  }
+  
+  bot.sendMessage(msg.chat.id, `✅ Anime ID: ${id} tanlandi. Endi ma'lumotlarni kiriting.`);
+});
+
+// /setanime-nomi
+bot.onText(/\/setanime-nomi (.+)/, (msg, match) => {
+  const admin = botState.adminData[msg.from.id];
+  if (!isAdmin(msg) || !admin) return;
+  const db = loadDB();
+  db[admin.activeAnimeId].title = match[1];
+  saveDB(db);
+  bot.sendMessage(msg.chat.id, `✅ Nomi sozlandi: ${match[1]}`);
+});
+
+// /setanime-yili, -janir, -joyi (Bir xil logika)
+const settings = {
+  'setanime-yili': 'year',
+  'setanime-janir': 'genres',
+  'setanime-joyi': 'order'
+};
+
+Object.keys(settings).forEach(cmd => {
+  bot.onText(new RegExp(`\\/${cmd} (.+)`), (msg, match) => {
+    const admin = botState.adminData[msg.from.id];
+    if (!isAdmin(msg) || !admin) return;
+    const db = loadDB();
+    db[admin.activeAnimeId][settings[cmd]] = match[1];
+    saveDB(db);
+    bot.sendMessage(msg.chat.id, `✅ ${settings[cmd]} yangilandi.`);
+  });
+});
+
+// /setanime-img (Rasm kutish)
+bot.onText(/\/setanime-img/, (msg) => {
+  const admin = botState.adminData[msg.from.id];
+  if (!isAdmin(msg) || !admin) return;
+  admin.action = 'waiting_photo';
+  bot.sendMessage(msg.chat.id, "🖼 Iltimos, anime uchun rasm yuboring (800x800 qilib kesiladi):");
+});
+
+// /setvideo (Reply qilingan video uchun)
+bot.onText(/\/setvideo (.+)/, (msg, match) => {
+  if (!isAdmin(msg)) return;
+  if (!msg.reply_to_message || !msg.reply_to_message.video) {
+    return bot.sendMessage(msg.chat.id, "❌ Iltimos, videoga Reply qilib yozing.");
+  }
+
+  const tags = parseContentTag(match[1]);
+  const animeId = match[1].split(' ')[0]; // Birinchi kelgan son ID deb olinadi
+  const fileId = msg.reply_to_message.video.file_id;
+
+  const db = loadDB();
+  if (!db[animeId]) return bot.sendMessage(msg.chat.id, "❌ Bu ID li anime topilmadi.");
+
+  const newItem = {
+    fileId,
+    season: tags.season,
+    part: tags.part,
+    episode: tags.episode,
+    film: tags.film,
+    addedAt: new Date().toISOString()
+  };
+
+  db[animeId].content.push(newItem);
+  // Tartiblash logikasi (ixtiyoriy)
+  saveDB(db);
+  bot.sendMessage(msg.chat.id, `✅ Video saqlandi! [S:${tags.season} P:${tags.part} E:${tags.episode}]`);
+});
+
+// /animes
+bot.onText(/\/animes/, (msg) => {
+  if (!isAdmin(msg)) return;
+  const db = loadDB();
+  const list = Object.values(db).map(a => `${a.id}: ${a.title}`).join('\n') || "Hali animelar yo'q.";
+  bot.sendMessage(msg.chat.id, `📂 *Baza:* \n\n${list}`, { parse_mode: 'Markdown' });
+});
+
+// /setdelet-<id>
+bot.onText(/\/setdelet-(\w+)/, (msg, match) => {
+  if (!isAdmin(msg)) return;
+  const id = match[1];
+  const db = loadDB();
+  if (db[id]) {
+    delete db[id];
+    saveDB(db);
+    bot.sendMessage(msg.chat.id, `🗑 Anime ID: ${id} o'chirildi.`);
   }
 });
 
-// Asosiy menyuni yuborish
-function sendMainMenu(chatId) {
-  const opts = {
-    parse_mode: 'HTML',
-    reply_markup: {
-      inline_keyboard: [
-        [
-          {
-            text: "🍎 Anor | Motion Mini App",
-            web_app: { url: 'https://anor-motion.vercel.app' }
-          }
-        ],
-        [
-          {
-            text: "🎬 Bizning kanal",
-            url: 'https://t.me/websitemake025'
-          },
-          {
-            text: "🎭 Senariyni o'qish",
-            url: 'https://t.me/bizbirgalikdakurashamizsenari'
-          }
-        ]
-      ]
-    }
-  };
-  bot.sendMessage(chatId, "<b>Xush kelibsiz!</b>\n\nQuyidagi tugma orqali ilovamizga kirishingiz va animelarni ko'rishingiz mumkin:", opts);
-}
+// Foto yuklanganda (sharp bilan ishlov berish)
+bot.on('photo', async (msg) => {
+  const admin = botState.adminData[msg.from.id];
+  if (!isAdmin(msg) || !admin || admin.action !== 'waiting_photo') return;
 
-// Obuna bo'lish haqida xabar yuborish
-function sendSubscriptionPrompt(chatId) {
-  const opts = {
-    parse_mode: 'HTML',
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: "1️⃣ Mashhur kanallarimiz", url: 'https://t.me/websitemake025' }
-        ],
-        [
-          { text: "2️⃣ Fimodauz kanali", url: 'https://t.me/Fimodauz' }
-        ],
-        [
-          { text: "✅ Tekshirish", callback_data: 'check_subs' }
-        ]
-      ]
-    }
-  };
-  bot.sendMessage(chatId, "<b>Assalomu alaykum!</b>\n\nBotdan foydalanish uchun avval quyidagi kanallarga obuna bo'ling va <b>'Tekshirish'</b> tugmasini bosing:", opts);
-}
+  try {
+    const photo = msg.photo[msg.photo.length - 1]; // Eng katta rasm
+    const file = await bot.getFile(photo.file_id);
+    const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
 
-// Tugmalarni boshqarish
-bot.on('callback_query', async (callbackQuery) => {
-  const action = callbackQuery.data;
-  const msg = callbackQuery.message;
-  const chatId = msg.chat.id;
-  const userId = callbackQuery.from.id;
+    const fileName = `${admin.activeAnimeId}_${Date.now()}.jpg`;
+    const localPath = path.join(uploadDir, fileName);
 
-  if (action === 'check_subs') {
-    const isSubscribed = await checkSubscription(userId);
-    if (isSubscribed) {
-      try {
-        await bot.deleteMessage(chatId, msg.message_id);
-      } catch (e) { }
-      sendMainMenu(chatId);
-      bot.answerCallbackQuery(callbackQuery.id, { text: "Rahmat! Obuna tasdiqlandi." });
-    } else {
-      bot.answerCallbackQuery(callbackQuery.id, {
-        text: "Siz hali barcha kanallarga obuna bo'lmagansiz!",
-        show_alert: true
-      });
-    }
+    // Rasmni yuklab olish va 800x800 kesish
+    const response = await fetch(fileUrl);
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    await sharp(buffer)
+      .resize(800, 800, { fit: 'cover', position: 'center' })
+      .toFile(localPath);
+
+    const db = loadDB();
+    db[admin.activeAnimeId].image = `/uploads/${fileName}`;
+    saveDB(db);
+
+    admin.action = 'none';
+    bot.sendMessage(msg.chat.id, "✅ Rasm yuklandi va 800x800 o'lchamga keltirildi!");
+  } catch (error) {
+    console.error(error);
+    bot.sendMessage(msg.chat.id, "❌ Rasmni saqlashda xatolik yuz berdi.");
   }
 });
 
-// Polling xatoliklari
-bot.on('polling_error', (error) => {
-  if (error.message.includes('409 Conflict')) {
-    console.error("Xatolik: Boshqa bot instansiyasi ishlayapti.");
-  } else {
-    console.error("Polling xatosi:", error.message);
+// callback_query uchun (Admin help tugmasi)
+bot.on('callback_query', (cb) => {
+  if (cb.data === 'admin_help') {
+    bot.answerCallbackQuery(cb.id);
+    bot.sendMessage(cb.message.chat.id, "Buyruqlarni ko'rish uchun /adminhelp yozing.");
   }
 });

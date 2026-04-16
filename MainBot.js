@@ -148,8 +148,11 @@ bot.onText(/\/setanime (\w+)/, (msg, match) => {
 
 // /setanime-nomi
 bot.onText(/\/setanime-nomi (.+)/, (msg, match) => {
+  if (!isAdmin(msg)) return;
   const admin = botState.adminData[msg.from.id];
-  if (!isAdmin(msg) || !admin) return;
+  if (!admin) {
+    return bot.sendMessage(msg.chat.id, "❌ Avval /setanime ID buyrug'ini bering.");
+  }
   const db = loadDB();
   db[admin.activeAnimeId].title = match[1];
   saveDB(db);
@@ -174,12 +177,15 @@ Object.keys(settings).forEach(cmd => {
   });
 });
 
-// /setanime-img (Rasm kutish)
+// /setanime-img
 bot.onText(/\/setanime-img/, (msg) => {
+  if (!isAdmin(msg)) return;
   const admin = botState.adminData[msg.from.id];
-  if (!isAdmin(msg) || !admin) return;
+  if (!admin) {
+    return bot.sendMessage(msg.chat.id, "❌ Buning uchun avval /setanime ID buyrug'i orqali animeni tanlang.");
+  }
   admin.action = 'waiting_photo';
-  bot.sendMessage(msg.chat.id, "🖼 Iltimos, anime uchun rasm yuboring (800x800 qilib kesiladi):");
+  bot.sendMessage(msg.chat.id, "🖼 Iltimos, anime uchun rasm yuboring (800x800 o'lchamga keltiriladi):");
 });
 
 // /setvideo (Reply qilingan video uchun)
@@ -280,4 +286,14 @@ bot.on('callback_query', (cb) => {
     bot.answerCallbackQuery(cb.id);
     bot.sendMessage(cb.message.chat.id, "Buyruqlarni ko'rish uchun /adminhelp yozing.");
   }
+});
+
+// Polling xatolarini kuzatish
+bot.on('polling_error', (error) => {
+  console.log("Polling error:", error.code);
+});
+
+// Xatoliklarni tutish (Process crash bo'lmasligi uchun)
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
 });
